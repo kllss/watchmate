@@ -1,0 +1,551 @@
+<template>
+  <div class="page">
+
+    <div class="head">
+      <div class="back" onclick="onBack"><image class="back-ic" src="/Common/icons/back.png"></image></div>
+      <text class="title">自己写</text>
+      <div class="clear" onclick="onClear"><text class="clear-t">清空</text></div>
+    </div>
+
+    <div class="compose">
+      <scroll class="textbox" id="tb" scroll-y="true">
+        <text class="text" if="{{hasText}}">{{text}}</text>
+        <text class="ph" if="{{!hasText}}">打拼音，或点「常用」选一句</text>
+      </scroll>
+      <text class="counter">{{counter}}</text>
+    </div>
+
+    <div class="cands" if="{{showCands}}">
+      <div class="cand" if="{{c0}}" onclick="onCand(0)"><text class="cand-t">{{c0}}</text></div>
+      <div class="cand" if="{{c1}}" onclick="onCand(1)"><text class="cand-t">{{c1}}</text></div>
+      <div class="cand" if="{{c2}}" onclick="onCand(2)"><text class="cand-t">{{c2}}</text></div>
+      <div class="cand" if="{{c3}}" onclick="onCand(3)"><text class="cand-t">{{c3}}</text></div>
+    </div>
+
+    <div class="kb" if="{{modeAbc}}">
+      <div class="krow">
+        <div class="key" onclick="onKey('q')"><text class="kt">q</text></div>
+        <div class="key" onclick="onKey('w')"><text class="kt">w</text></div>
+        <div class="key" onclick="onKey('e')"><text class="kt">e</text></div>
+        <div class="key" onclick="onKey('r')"><text class="kt">r</text></div>
+        <div class="key" onclick="onKey('t')"><text class="kt">t</text></div>
+        <div class="key" onclick="onKey('y')"><text class="kt">y</text></div>
+        <div class="key" onclick="onKey('u')"><text class="kt">u</text></div>
+        <div class="key" onclick="onKey('i')"><text class="kt">i</text></div>
+        <div class="key" onclick="onKey('o')"><text class="kt">o</text></div>
+        <div class="key" onclick="onKey('p')"><text class="kt">p</text></div>
+      </div>
+      <div class="krow krow-mid">
+        <div class="key key-w42" onclick="onKey('a')"><text class="kt">a</text></div>
+        <div class="key key-w42" onclick="onKey('s')"><text class="kt">s</text></div>
+        <div class="key key-w42" onclick="onKey('d')"><text class="kt">d</text></div>
+        <div class="key key-w42" onclick="onKey('f')"><text class="kt">f</text></div>
+        <div class="key key-w42" onclick="onKey('g')"><text class="kt">g</text></div>
+        <div class="key key-w42" onclick="onKey('h')"><text class="kt">h</text></div>
+        <div class="key key-w42" onclick="onKey('j')"><text class="kt">j</text></div>
+        <div class="key key-w42" onclick="onKey('k')"><text class="kt">k</text></div>
+        <div class="key key-w42" onclick="onKey('l')"><text class="kt">l</text></div>
+      </div>
+      <div class="krow">
+        <div class="key" onclick="onKey('z')"><text class="kt">z</text></div>
+        <div class="key" onclick="onKey('x')"><text class="kt">x</text></div>
+        <div class="key" onclick="onKey('c')"><text class="kt">c</text></div>
+        <div class="key" onclick="onKey('v')"><text class="kt">v</text></div>
+        <div class="key" onclick="onKey('b')"><text class="kt">b</text></div>
+        <div class="key" onclick="onKey('n')"><text class="kt">n</text></div>
+        <div class="key" onclick="onKey('m')"><text class="kt">m</text></div>
+        <div class="key" onclick="onKey(',')"><text class="kt">,</text></div>
+        <div class="key" onclick="onKey('.')"><text class="kt">.</text></div>
+        <div class="key" onclick="onKey('?')"><text class="kt">?</text></div>
+      </div>
+      <div class="krow krow-fn">
+        <div class="fkey fkey-w58" onclick="onSymMode"><text class="fk-t">123</text></div>
+        <div class="fkey fkey-w58" onclick="onBoardMode"><text class="fk-t">常用</text></div>
+        <div class="fkey fkey-space" onclick="onSpace"><text class="fk-t">空格</text></div>
+        <div class="fkey fkey-w46" onclick="onDel"><text class="fk-t">⌫</text></div>
+        <div class="send" onclick="onSend"><text class="send-t">发送</text></div>
+      </div>
+    </div>
+
+    <div class="kb" if="{{modeSym}}">
+      <div class="krow">
+        <div class="key" onclick="onSym('1')"><text class="kt">1</text></div>
+        <div class="key" onclick="onSym('2')"><text class="kt">2</text></div>
+        <div class="key" onclick="onSym('3')"><text class="kt">3</text></div>
+        <div class="key" onclick="onSym('4')"><text class="kt">4</text></div>
+        <div class="key" onclick="onSym('5')"><text class="kt">5</text></div>
+        <div class="key" onclick="onSym('6')"><text class="kt">6</text></div>
+        <div class="key" onclick="onSym('7')"><text class="kt">7</text></div>
+        <div class="key" onclick="onSym('8')"><text class="kt">8</text></div>
+        <div class="key" onclick="onSym('9')"><text class="kt">9</text></div>
+        <div class="key" onclick="onSym('0')"><text class="kt">0</text></div>
+      </div>
+      <div class="krow">
+        <div class="key" onclick="onSym('-')"><text class="kt">-</text></div>
+        <div class="key" onclick="onSym('+')"><text class="kt">+</text></div>
+        <div class="key" onclick="onSym('=')"><text class="kt">=</text></div>
+        <div class="key" onclick="onSym('/')"><text class="kt">/</text></div>
+        <div class="key" onclick="onSym(':')"><text class="kt">:</text></div>
+        <div class="key" onclick="onSym(';')"><text class="kt">;</text></div>
+        <div class="key" onclick="onSym('(')"><text class="kt">(</text></div>
+        <div class="key" onclick="onSym(')')"><text class="kt">)</text></div>
+        <div class="key" onclick="onSym('¥')"><text class="kt">¥</text></div>
+        <div class="key" onclick="onSym('@')"><text class="kt">@</text></div>
+      </div>
+      <div class="krow">
+        <div class="key" onclick="onSym('.')"><text class="kt">.</text></div>
+        <div class="key" onclick="onSym(',')"><text class="kt">,</text></div>
+        <div class="key" onclick="onSym('?')"><text class="kt">?</text></div>
+        <div class="key" onclick="onSym('!')"><text class="kt">!</text></div>
+        <div class="key" onclick="onSym('#')"><text class="kt">#</text></div>
+        <div class="key" onclick="onSym('*')"><text class="kt">*</text></div>
+        <div class="key" onclick="onSym('%')"><text class="kt">%</text></div>
+        <div class="key" onclick="onSym('~')"><text class="kt">~</text></div>
+        <div class="key" onclick="onSym('_')"><text class="kt">_</text></div>
+        <div class="key" onclick="onSym('@')"><text class="kt">@</text></div>
+      </div>
+      <div class="krow krow-fn">
+        <div class="fkey fkey-w58" onclick="onAbcMode"><text class="fk-t">ABC</text></div>
+        <div class="fkey fkey-w58" onclick="onBoardMode"><text class="fk-t">常用</text></div>
+        <div class="fkey fkey-space" onclick="onSpace"><text class="fk-t">空格</text></div>
+        <div class="fkey fkey-w46" onclick="onDel"><text class="fk-t">⌫</text></div>
+        <div class="send" onclick="onSend"><text class="send-t">发送</text></div>
+      </div>
+    </div>
+
+    <div class="board" if="{{modeBoard}}">
+      <div class="brow">
+        <div class="bcell" if="{{b0}}" onclick="onBoard(0)"><text class="b-t">{{b0}}</text></div>
+        <div class="bcell" if="{{b1}}" onclick="onBoard(1)"><text class="b-t">{{b1}}</text></div>
+        <div class="bcell" if="{{b2}}" onclick="onBoard(2)"><text class="b-t">{{b2}}</text></div>
+        <div class="bcell" if="{{b3}}" onclick="onBoard(3)"><text class="b-t">{{b3}}</text></div>
+      </div>
+      <div class="brow">
+        <div class="bcell" if="{{b4}}" onclick="onBoard(4)"><text class="b-t">{{b4}}</text></div>
+        <div class="bcell" if="{{b5}}" onclick="onBoard(5)"><text class="b-t">{{b5}}</text></div>
+        <div class="bcell" if="{{b6}}" onclick="onBoard(6)"><text class="b-t">{{b6}}</text></div>
+        <div class="bcell" if="{{b7}}" onclick="onBoard(7)"><text class="b-t">{{b7}}</text></div>
+      </div>
+      <div class="brow">
+        <div class="bcell" if="{{b8}}" onclick="onBoard(8)"><text class="b-t">{{b8}}</text></div>
+        <div class="bcell" if="{{b9}}" onclick="onBoard(9)"><text class="b-t">{{b9}}</text></div>
+        <div class="bcell" if="{{b10}}" onclick="onBoard(10)"><text class="b-t">{{b10}}</text></div>
+        <div class="bcell" if="{{b11}}" onclick="onBoard(11)"><text class="b-t">{{b11}}</text></div>
+      </div>
+      <div class="krow krow-fn">
+        <div class="fkey fkey-w58" onclick="onBoardPrev"><text class="fk-t">‹</text></div>
+        <div class="fkey fkey-w58" onclick="onBoardNext"><text class="fk-t">{{boardLabel}}</text></div>
+        <div class="fkey fkey-space" onclick="onBoardNext"><text class="fk-t">下一组 ›</text></div>
+        <div class="fkey fkey-w58" onclick="onAbcMode"><text class="fk-t">ABC</text></div>
+        <div class="send" onclick="onSend"><text class="send-t">发送</text></div>
+      </div>
+    </div>
+
+    <text class="hint">{{hint}}</text>
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import '../../core/boot.js'
+
+const WM = globalThis.__wm || {}
+const S = WM.store
+const I = WM.ime
+
+export default {
+  private: {
+    text: '',
+    hasText: false,
+    counter: '0/220',
+    canSend: false,
+    hint: '打拼音看候选：jt → 今天',
+    c0: '',
+    c1: '',
+    c2: '',
+    c3: '',
+    showCands: true,
+    modeAbc: true,
+    modeSym: false,
+    modeBoard: false,
+    b0: '',
+    b1: '',
+    b2: '',
+    b3: '',
+    b4: '',
+    b5: '',
+    b6: '',
+    b7: '',
+    b8: '',
+    b9: '',
+    b10: '',
+    b11: '',
+    boardLabel: '1/4'
+  },
+
+  onInit() {
+    this.cands = []
+    this.boardIndex = 0
+    this.boardWords = []
+    this.update()
+    this.fillBoard()
+  },
+
+  onShow() {
+    this.update()
+  },
+
+  update() {
+    const text = this.text || ''
+    this.hasText = text.length > 0
+    this.counter = text.length + '/' + I.MAX_LEN
+    this.canSend = text.length > 0
+
+    const list = I.candidates(text, 4)
+    this.cands = list
+    this.c0 = list[0] || ''
+    this.c1 = list[1] || ''
+    this.c2 = list[2] || ''
+    this.c3 = list[3] || ''
+    this.showCands = list.length > 0 && this.modeAbc
+  },
+
+  onKey(ch) {
+    if ((this.text || '').length >= I.MAX_LEN) return
+    this.text = I.push(this.text, ch)
+    this.update()
+  },
+
+  onSym(ch) {
+    this.onKey(ch)
+  },
+
+  onSpace() {
+    this.onKey(' ')
+  },
+
+  onDel() {
+    this.text = I.backspace(this.text)
+    this.update()
+  },
+
+  onClear() {
+    this.text = ''
+    this.update()
+  },
+
+  onCand(i) {
+    const word = this.cands[i]
+    if (!word) return
+    this.text = I.commit(this.text, word)
+    if (this.text.length > I.MAX_LEN) this.text = this.text.slice(0, I.MAX_LEN)
+    this.update()
+  },
+
+  onAbcMode() {
+    this.modeAbc = true
+    this.modeSym = false
+    this.modeBoard = false
+    this.hint = '打拼音看候选：jt → 今天'
+    this.update()
+  },
+
+  onSymMode() {
+    this.modeAbc = false
+    this.modeSym = true
+    this.modeBoard = false
+    this.hint = '数字和符号'
+    this.showCands = false
+  },
+
+  onBoardMode() {
+    this.modeAbc = false
+    this.modeSym = false
+    this.modeBoard = true
+    this.hint = '点一句直接插入，也可以回 ABC 打拼音'
+    this.showCands = false
+  },
+
+  fillBoard() {
+    const page = I.boardPage(this.boardIndex)
+    this.boardWords = page
+    this.b0 = page[0] || ''
+    this.b1 = page[1] || ''
+    this.b2 = page[2] || ''
+    this.b3 = page[3] || ''
+    this.b4 = page[4] || ''
+    this.b5 = page[5] || ''
+    this.b6 = page[6] || ''
+    this.b7 = page[7] || ''
+    this.b8 = page[8] || ''
+    this.b9 = page[9] || ''
+    this.b10 = page[10] || ''
+    this.b11 = page[11] || ''
+    this.boardLabel = this.boardIndex + 1 + '/' + I.boardCount
+  },
+
+  onBoardPrev() {
+    this.boardIndex = (this.boardIndex + I.boardCount - 1) % I.boardCount
+    this.fillBoard()
+  },
+
+  onBoardNext() {
+    this.boardIndex = (this.boardIndex + 1) % I.boardCount
+    this.fillBoard()
+  },
+
+  onBoard(i) {
+    const word = this.boardWords[i]
+    if (!word) return
+    this.text = I.insert(this.text, word)
+    if (this.text.length > I.MAX_LEN) this.text = this.text.slice(0, I.MAX_LEN)
+    this.onAbcMode()
+  },
+
+  onSend() {
+    const text = (this.text || '').trim()
+    if (!text) return
+    S.pending(text)
+    router.back()
+  },
+
+  onBack() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  padding: 10px 12px;
+  background-color: #07090d;
+}
+
+.head {
+  width: 100%;
+  height: 40px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.back {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background-color: #0f141d;
+  justify-content: center;
+  align-items: center;
+}
+
+.back-ic {
+  width: 24px;
+  height: 24px;
+}
+
+.title {
+  flex: 1;
+  color: #eaf0f8;
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 8px;
+}
+
+.clear {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  background-color: #171b23;
+  justify-content: center;
+  align-items: center;
+}
+
+.clear-t {
+  color: #9aa6ba;
+  font-size: 14px;
+}
+
+.compose {
+  width: 100%;
+  height: 96px;
+  flex-direction: column;
+  margin-top: 6px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background-color: #0b1018;
+  border-width: 1px;
+  border-color: #1b2230;
+}
+
+.textbox {
+  width: 100%;
+  height: 62px;
+}
+
+.text {
+  color: #eaf0f8;
+  font-size: 18px;
+}
+
+.ph {
+  color: #4f5a6d;
+  font-size: 15px;
+}
+
+.counter {
+  width: 100%;
+  color: #4c586d;
+  font-size: 12px;
+  text-align: right;
+  margin-top: 3px;
+}
+
+.cands {
+  width: 100%;
+  height: 40px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cand {
+  width: 96px;
+  height: 34px;
+  border-radius: 9px;
+  background-color: #101722;
+  border-width: 1px;
+  border-color: #1e2735;
+  justify-content: center;
+  align-items: center;
+}
+
+.cand-t {
+  color: #d7e2f1;
+  font-size: 15px;
+}
+
+.kb {
+  width: 100%;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.krow {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.krow-mid {
+  padding: 0 3px;
+}
+
+.key {
+  width: 38px;
+  height: 44px;
+  border-radius: 9px;
+  background-color: #151b25;
+  border-width: 1px;
+  border-color: #232c3a;
+  justify-content: center;
+  align-items: center;
+}
+
+.key-w42 {
+  width: 42px;
+}
+
+.kt {
+  color: #dfe7f2;
+  font-size: 18px;
+}
+
+.krow-fn {
+  margin-top: 2px;
+}
+
+.fkey {
+  height: 44px;
+  border-radius: 9px;
+  background-color: #101620;
+  border-width: 1px;
+  border-color: #1d2633;
+  justify-content: center;
+  align-items: center;
+}
+
+.fkey-w58 {
+  width: 58px;
+}
+
+.fkey-w46 {
+  width: 46px;
+}
+
+.fkey-space {
+  flex: 1;
+  margin-left: 4px;
+  margin-right: 4px;
+}
+
+.fk-t {
+  color: #aeb9ca;
+  font-size: 14px;
+}
+
+.send {
+  width: 64px;
+  height: 44px;
+  border-radius: 9px;
+  background-color: #1c5c4e;
+  justify-content: center;
+  align-items: center;
+}
+
+.send-t {
+  color: #bff8e8;
+  font-size: 15px;
+  font-weight: bold;
+}
+
+.board {
+  width: 100%;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.brow {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.bcell {
+  width: 98px;
+  height: 44px;
+  border-radius: 9px;
+  background-color: #101722;
+  border-width: 1px;
+  border-color: #1e2735;
+  justify-content: center;
+  align-items: center;
+}
+
+.b-t {
+  color: #d7e2f1;
+  font-size: 14px;
+}
+
+.hint {
+  width: 100%;
+  color: #566175;
+  font-size: 12px;
+  text-align: center;
+  margin-top: 2px;
+}
+</style>

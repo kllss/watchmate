@@ -1,0 +1,115 @@
+{
+  "_hint": "桥接默认配置。复制为 config.local.json 或设置环境变量覆盖。默认 echo 模式，不联网也能跑通链路。",
+  "server": {
+    "port": 8787,
+    "host": "127.0.0.1",
+    "token": ""
+  },
+  "provider": {
+    "kind": "auto",
+    "label": "WorkBuddy",
+    "baseUrl": "",
+    "chatPath": "/chat/completions",
+    "model": "",
+    "apiKey": "",
+    "apiKeyEnv": "WM_PROVIDER_KEY",
+    "authHeader": "Authorization",
+    "authPrefix": "Bearer ",
+    "maxTokens": 320,
+    "temperature": 0.4,
+    "timeoutMs": 25000
+  },
+  "systemPrompt": "你在手表上回答。最多 120 个汉字或 4 行；不要 Markdown、表格、代码块、链接。能分条就用 1. 2. 3.，每行不超过 24 个字。",
+  "integrations": {
+    "githubToken": "",
+    "weather": {
+      "label": "北京",
+      "lat": 39.9042,
+      "lon": 116.4074
+    },
+    "notesPath": "./notes.md"
+  },
+  "cards": [
+    {
+      "id": "weather",
+      "type": "weather",
+      "title": "北京",
+      "unit": "°C",
+      "cacheSec": 120
+    },
+    {
+      "id": "github",
+      "type": "github",
+      "title": "GitHub",
+      "unit": "条",
+      "limit": 5,
+      "cacheSec": 30
+    },
+    {
+      "id": "btc",
+      "type": "http",
+      "title": "BTC",
+      "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=cny",
+      "valuePath": "bitcoin.cny",
+      "unit": "¥",
+      "cacheSec": 30,
+      "timeoutMs": 6000
+    },
+    {
+      "id": "self",
+      "type": "self",
+      "title": "桥接",
+      "unit": ""
+    }
+  ],
+  "prompts": [
+    {
+      "id": "github_digest",
+      "label": "GitHub 摘要",
+      "hint": "未读通知",
+      "sources": [
+        { "key": "gh", "type": "github", "limit": 8 }
+      ],
+      "template": "这是我的 GitHub 未读通知：\n{{gh}}\n请用 3 条短句总结最重要的三件事，每条不超过 24 个字。"
+    },
+    {
+      "id": "daily",
+      "label": "今日简报",
+      "hint": "时间+天气+通知",
+      "sources": [
+        { "key": "time", "type": "time" },
+        { "key": "weather", "type": "weather" },
+        { "key": "gh", "type": "github", "limit": 5 }
+      ],
+      "template": "现在：{{time}}\n天气：{{weather}}\nGitHub：{{gh}}\n请给我 3 条今天的重点，每条不超过 20 个字。"
+    },
+    {
+      "id": "focus",
+      "label": "先做什么",
+      "hint": "按通知排优先级",
+      "sources": [
+        { "key": "gh", "type": "github", "limit": 10 }
+      ],
+      "template": "我的未读通知：\n{{gh}}\n请告诉我先做哪一件，并给一句理由，总共不超过 50 个字。"
+    },
+    {
+      "id": "standup",
+      "label": "站会三句",
+      "hint": "昨天/今天/阻塞",
+      "sources": [
+        { "key": "gh", "type": "github", "limit": 10 }
+      ],
+      "template": "根据这些通知：\n{{gh}}\n帮我写站会三句话：昨天做了什么、今天做什么、有什么阻塞。每句不超过 22 个字。"
+    },
+    {
+      "id": "weekly",
+      "label": "写周报",
+      "hint": "通知+笔记",
+      "sources": [
+        { "key": "gh", "type": "github", "limit": 15 },
+        { "key": "notes", "type": "file", "path": "./notes.md", "max": 1200 }
+      ],
+      "template": "通知：\n{{gh}}\n笔记：\n{{notes}}\n请写一份 4 行的周报，每行不超过 24 个字。"
+    }
+  ]
+}

@@ -1,0 +1,260 @@
+<template>
+  <div class="page">
+
+    <div class="top">
+      <text class="clock">{{clock}}</text>
+      <div class="pill pill-good" if="{{toneGood}}"><text class="pill-t good-t">{{status}}</text></div>
+      <div class="pill pill-warn" if="{{toneWarn}}"><text class="pill-t warn-t">{{status}}</text></div>
+      <div class="pill pill-bad" if="{{toneBad}}"><text class="pill-t bad-t">{{status}}</text></div>
+    </div>
+
+    <text class="greet">{{greet}}</text>
+    <text class="sub">{{providerLine}}</text>
+
+    <div class="menu">
+      <div class="entry" onclick="onAsk">
+        <image class="entry-ic" src="/Common/icons/chat.png"></image>
+        <text class="entry-t">问 AI</text>
+        <text class="entry-s">提问 · 自写 · 预设</text>
+      </div>
+
+      <div class="entry" onclick="onSettings">
+        <image class="entry-ic" src="/Common/icons/gear.png"></image>
+        <text class="entry-t">设置</text>
+        <text class="entry-s">模式 · 服务商 · 测试</text>
+      </div>
+    </div>
+
+    <div class="spacer"></div>
+
+    <text class="foot">{{foot}}</text>
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import '../../core/boot.js'
+
+const WM = globalThis.__wm || {}
+WM.save.use(storage)
+
+const C = WM.config
+const F = WM.format
+const S = WM.store
+
+export default {
+  private: {
+    clock: '--:--',
+    greet: '',
+    status: '…',
+    toneGood: false,
+    toneWarn: true,
+    toneBad: false,
+    providerLine: '',
+    foot: ''
+  },
+
+  onInit() {
+    this.refreshClock()
+    this.timer = setInterval(() => {
+      this.refreshClock()
+    }, 30000)
+    S.hydrate(() => {
+      this.render()
+    })
+  },
+
+  onShow() {
+    this.refreshClock()
+    this.render()
+  },
+
+  onHide() {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+  },
+
+  onDestroy() {
+    if (this.timer) {
+      clearInterval(this.timer)
+      this.timer = null
+    }
+  },
+
+  refreshClock() {
+    this.clock = F.fmtClock()
+    this.greet = F.greeting()
+  },
+
+  render() {
+    const mode = C.mode()
+    const issues = C.issues()
+
+    this.toneGood = false
+    this.toneWarn = false
+    this.toneBad = false
+
+    if (mode === 'demo') {
+      this.status = '演示'
+      this.toneWarn = true
+      this.providerLine = '内置示例 · 不联网'
+    } else if (mode === 'bridge') {
+      const url = C.bridgeUrl()
+      if (url) {
+        this.status = '桥接'
+        this.toneGood = issues.length === 0
+        this.toneWarn = issues.length > 0
+        this.providerLine = C.hostOf(url)
+      } else {
+        this.status = '未配置'
+        this.toneWarn = true
+        this.providerLine = '桥接地址还没填'
+      }
+    } else {
+      const p = C.provider()
+      const ok = p && C.baseUrl(p) && p.model && (p.apiKey || p.id === 'ollama')
+      this.status = ok ? '直连' : '待配置'
+      this.toneGood = !!ok
+      this.toneWarn = !ok
+      this.providerLine = p ? p.label + ' · ' + (p.model || '未选模型') : '没有可用服务商'
+    }
+
+    const provider = C.provider()
+    this.foot = 'v0.1.0 · ' + (mode === 'direct' && provider ? provider.label : mode)
+  },
+
+  onAsk() {
+    router.push({ uri: '/ask' })
+  },
+
+  onSettings() {
+    router.push({ uri: '/settings' })
+  }
+}
+</script>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  padding: 18px 16px;
+  background-color: #07090d;
+}
+
+.top {
+  width: 100%;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.clock {
+  color: #eaf0f8;
+  font-size: 44px;
+  font-weight: bold;
+}
+
+.pill {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 13px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.pill-good {
+  background-color: #10352c;
+}
+
+.pill-warn {
+  background-color: #3a2a12;
+}
+
+.pill-bad {
+  background-color: #3a1a1a;
+}
+
+.pill-t {
+  font-size: 13px;
+  color: #9ff0d8;
+}
+
+.good-t {
+  color: #6ee7a8;
+}
+
+.warn-t {
+  color: #f3c07b;
+}
+
+.bad-t {
+  color: #ff9a9a;
+}
+
+.greet {
+  color: #f2f6fc;
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 8px;
+}
+
+.sub {
+  color: #7f8a9d;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.menu {
+  width: 100%;
+  flex-direction: column;
+  margin-top: 26px;
+}
+
+.entry {
+  width: 100%;
+  height: 92px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 20px;
+  margin-bottom: 14px;
+  border-radius: 18px;
+  border-width: 1px;
+  border-color: #1b2230;
+  background-color: #0f141d;
+}
+
+.entry-ic {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.entry-t {
+  color: #eef3fb;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.entry-s {
+  color: #78839a;
+  font-size: 14px;
+  margin-top: 3px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.foot {
+  width: 100%;
+  color: #3f4859;
+  font-size: 11px;
+  text-align: center;
+}
+</style>

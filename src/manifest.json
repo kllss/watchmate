@@ -1,0 +1,54 @@
+{
+  "package": "com.klls.watchmate",
+  "name": "腕上搭档",
+  "icon": "/Common/icon.png",
+  "versionName": "0.1.0",
+  "versionCode": 1,
+  "minAPILevel": 2,
+  "deviceTypeList": [
+    "watch"
+  ],
+  "features": [
+    {
+      "name": "system.fetch"
+    },
+    {
+      "name": "system.storage"
+    },
+    {
+      "name": "system.router"
+    },
+    {
+      "name": "system.vibrator"
+    }
+  ],
+  "permissions": [],
+  "config": {
+    "logLevel": "debug",
+    "designWidth": 432
+  },
+  "router": {
+    "entry": "pages/Home",
+    "pages": {
+      "pages/Home": {
+        "component": "index",
+        "path": "/"
+      },
+      "pages/Ask": {
+        "component": "index",
+        "path": "/ask"
+      },
+      "pages/Settings": {
+        "component": "index",
+        "path": "/settings"
+      },
+      "pages/Compose": {
+        "component": "index",
+        "path": "/compose"
+      }
+    }
+  },
+  "display": {
+    "backgroundColor": "#07090D"
+  }
+}

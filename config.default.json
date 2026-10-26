@@ -1,0 +1,137 @@
+{
+  "_hint": "默认配置。不要在这里放密钥；复制为 config.local.json 覆盖；密钥可用环境变量在构建时注入（写法见 README）。",
+  "schema": 1,
+  "mode": "direct",
+  "bridge": {
+    "url": "",
+    "token": "",
+    "timeoutMs": 22000
+  },
+  "activeProvider": "workbuddy",
+  "providers": [
+    {
+      "id": "workbuddy",
+      "label": "WorkBuddy",
+      "baseUrl": "",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    },
+    {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "baseUrl": "https://api.deepseek.com/v1",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "deepseek-chat",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    },
+    {
+      "id": "openai",
+      "label": "OpenAI",
+      "baseUrl": "https://api.openai.com/v1",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "gpt-4o-mini",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    },
+    {
+      "id": "moonshot",
+      "label": "Moonshot",
+      "baseUrl": "https://api.moonshot.cn/v1",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "moonshot-v1-8k",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    },
+    {
+      "id": "zhipu",
+      "label": "智谱 GLM",
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "glm-4-flash",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    },
+    {
+      "id": "ollama",
+      "label": "Ollama",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "chatPath": "/chat/completions",
+      "modelsPath": "/models",
+      "model": "qwen2.5:3b",
+      "apiKey": "",
+      "authHeader": "Authorization",
+      "authPrefix": "Bearer "
+    }
+  ],
+  "request": {
+    "timeoutMs": 28000,
+    "maxTokens": 320,
+    "temperature": 0.4,
+    "maxChars": 900,
+    "systemPrompt": "你是一个手表助手。回答必须短：最多 120 个汉字或 4 行；不要 Markdown、表格、代码块、链接。能分条就用 1. 2. 3.，每行不超过 24 个字。"
+  },
+  "prompts": [
+    {
+      "id": "daily",
+      "label": "今日简报",
+      "hint": "3 条重点",
+      "text": "用 3 条短句给我一个今日简报：先提醒我专注一件事，再给一条效率建议，最后给一句鼓励。每条不超过 20 个字。"
+    },
+    {
+      "id": "naming",
+      "label": "起个名字",
+      "hint": "运动应用",
+      "text": "给一个手表运动应用起 3 个中文名字，每个不超过 5 个字，只列名字，不要解释。"
+    },
+    {
+      "id": "translate",
+      "label": "翻译",
+      "hint": "中 → 英日",
+      "text": "把「今天也要好好工作」翻译成英文和日文，各一行，不要解释。"
+    },
+    {
+      "id": "explain",
+      "label": "解释一下",
+      "hint": "Vela 快应用",
+      "text": "用 3 句话解释什么是 Vela 快应用，每句不超过 25 个字。"
+    },
+    {
+      "id": "checklist",
+      "label": "列清单",
+      "hint": "周一早晨",
+      "text": "给我一个 5 步的周一早晨清单，每步不超过 8 个字，只列清单。"
+    },
+    {
+      "id": "polish",
+      "label": "润色",
+      "hint": "一句话",
+      "text": "把这句话改得更简洁：「我想问一下这个功能大概什么时候可以上线」。只给改后的版本。"
+    },
+    {
+      "id": "joke",
+      "label": "冷笑话",
+      "hint": "20 字以内",
+      "text": "讲一个 20 个字以内的冷笑话，只讲笑话。"
+    },
+    {
+      "id": "dinner",
+      "label": "吃什么",
+      "hint": "3 个选项",
+      "text": "推荐 3 个 30 分钟内能做好的晚饭，各一行，不要解释。"
+    }
+  ],
+  "cards": []
+}

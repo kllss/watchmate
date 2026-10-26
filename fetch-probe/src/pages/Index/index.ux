@@ -1,0 +1,226 @@
+<template>
+  <div class="page">
+
+    <text class="title">fetch 探针</text>
+    <text class="sub">测真机网络能力</text>
+
+    <div class="net" if="{{netType}}">
+      <text class="net-t">网络类型：{{netType}}</text>
+    </div>
+
+    <div class="btn" onclick="onTestLocal"><text class="btn-t">① 局域网 Ollama</text></div>
+    <div class="btn" onclick="onTestPublic"><text class="btn-t">② 公网 HTTPS</text></div>
+    <div class="btn" onclick="onTestLocalChat"><text class="btn-t">③ Ollama 问答</text></div>
+
+    <text class="result" if="{{busy}}">{{busy}}</text>
+
+    <div class="resultbox" if="{{hasResult}}">
+      <text class="r-code">{{rCode}}</text>
+      <text class="r-line" for="{{rLines}}">{{$item}}</text>
+    </div>
+
+  </div>
+</template>
+
+<script>
+import fetch from '@system.fetch'
+import network from '@system.network'
+
+const LOCAL = 'http://192.168.0.102:11434/api/tags'
+
+export default {
+  private: {
+    netType: '',
+    busy: '',
+    hasResult: false,
+    rCode: '',
+    rLines: []
+  },
+
+  onInit() {
+    this.checkNetwork()
+  },
+
+  checkNetwork() {
+    try {
+      network.getType({
+        success: (d) => {
+          this.netType = d.type || '未知'
+        },
+        fail: (d, c) => {
+          this.netType = '获取失败 code=' + c
+        }
+      })
+    } catch (e) {
+      this.netType = 'network 模块异常'
+    }
+  },
+
+  onTestLocal() {
+    this.run('GET ' + LOCAL, LOCAL, { method: 'GET' })
+  },
+
+  onTestPublic() {
+    this.run('GET https://example.com', 'https://example.com', { method: 'GET' })
+  },
+
+  onTestLocalChat() {
+    const body = JSON.stringify({
+      model: 'qwen2.5:3b',
+      messages: [{ role: 'user', content: '说一个字：好' }],
+      max_tokens: 32,
+      stream: false
+    })
+    this.run('POST Ollama /v1/chat', 'http://192.168.0.102:11434/v1/chat/completions', {
+      method: 'POST',
+      header: { 'Content-Type': 'application/json' },
+      data: body
+    })
+  },
+
+  run(label, url, opt) {
+    this.busy = label + ' …'
+    this.hasResult = false
+    const t0 = Date.now()
+
+    const done = (ok, code, lines) => {
+      const ms = Date.now() - t0
+      this.busy = ''
+      this.hasResult = true
+      this.rCode = (ok ? '✅ ' : '❌ ') + code + ' · ' + ms + 'ms'
+      this.rLines = lines
+      this.checkNetwork()
+    }
+
+    try {
+      const task = fetch.fetch({
+        url: url,
+        method: opt.method,
+        header: opt.header || {},
+        data: opt.data,
+        responseType: 'text',
+        success: (res) => {
+          const status = res && typeof res.code === 'number' ? res.code : 200
+          let body = ''
+          if (res && res.data !== undefined) body = typeof res.data === 'object' ? JSON.stringify(res.data) : String(res.data)
+          done(true, 'HTTP ' + status, this.clipLines(body, 6))
+        },
+        fail: (data, code) => {
+          let msg = ''
+          if (data && typeof data === 'string') msg = data
+          else if (data && data.data) msg = String(data.data)
+          else if (data && data.message) msg = String(data.message)
+          done(false, 'fail code=' + code, this.clipLines(msg || JSON.stringify(data || {}), 6))
+        }
+      })
+      // 有些实现返回 promise
+      if (task && typeof task.then === 'function') {
+        task.then((res) => {
+          const status = res && typeof res.code === 'number' ? res.code : 200
+          let body = ''
+          if (res && res.data !== undefined) body = typeof res.data === 'object' ? JSON.stringify(res.data) : String(res.data)
+          done(true, 'HTTP ' + status, this.clipLines(body, 6))
+        }).catch((e) => {
+          done(false, 'promise reject', this.clipLines(String((e && e.message) || e), 6))
+        })
+      }
+    } catch (e) {
+      done(false, 'throw', this.clipLines(String((e && e.message) || e), 6))
+    }
+  },
+
+  clipLines(text, max) {
+    const s = String(text || '').slice(0, 600)
+    const lines = s.split('\n')
+    const out = []
+    for (let i = 0; i < lines.length && i < max; i++) {
+      let l = lines[i]
+      if (l.length > 34) l = l.slice(0, 34) + '…'
+      out.push(l)
+    }
+    return out.length ? out : ['（空响应）']
+  }
+}
+</script>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  padding: 14px;
+  background-color: #07090d;
+}
+
+.title {
+  color: #eaf0f8;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.sub {
+  color: #7f8a9d;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.net {
+  width: 100%;
+  padding: 8px 10px;
+  margin-top: 8px;
+  border-radius: 10px;
+  background-color: #0f141d;
+}
+
+.net-t {
+  color: #5ee1c1;
+  font-size: 14px;
+}
+
+.btn {
+  width: 100%;
+  height: 46px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background-color: #17362f;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-t {
+  color: #8ff0d8;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.result {
+  width: 100%;
+  color: #f3c07b;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.resultbox {
+  width: 100%;
+  flex-direction: column;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background-color: #0b1018;
+  border-width: 1px;
+  border-color: #1b2230;
+}
+
+.r-code {
+  color: #eaf0f8;
+  font-size: 15px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.r-line {
+  color: #aeb9ca;
+  font-size: 12px;
+  margin-top: 2px;
+}
+</style>

@@ -1,0 +1,439 @@
+<template>
+  <div class="page">
+
+    <div class="head">
+      <div class="back" onclick="onBack"><image class="back-ic" src="/Common/icons/back.png"></image></div>
+      <text class="title">设置</text>
+    </div>
+
+    <scroll class="body" scroll-y="true">
+
+      <div class="sec">
+        <text class="sec-t">连接</text>
+
+        <div class="row" onclick="onToggleMode">
+          <text class="k">模式</text>
+          <text class="v v-accent">{{modeLabel}}</text>
+        </div>
+        <div class="row" onclick="onProvider">
+          <text class="k">服务商</text>
+          <text class="v">{{providerLabel}}</text>
+        </div>
+        <div class="row">
+          <text class="k">模型</text>
+          <text class="v">{{modelLabel}}</text>
+        </div>
+        <div class="row">
+          <text class="k">接口</text>
+          <text class="v">{{endpointLabel}}</text>
+        </div>
+        <div class="row">
+          <text class="k">Key</text>
+          <text class="v">{{keyLabel}}</text>
+        </div>
+        <div class="row">
+          <text class="k">桥接</text>
+          <text class="v">{{bridgeLabel}}</text>
+        </div>
+      </div>
+
+      <div class="sec">
+        <text class="sec-t">关于</text>
+
+        <div class="row">
+          <text class="k">输入</text>
+          <text class="v">自绘键盘 · 拼音</text>
+        </div>
+        <div class="row">
+          <text class="k">版本</text>
+          <text class="v">{{versionLabel}}</text>
+        </div>
+        <div class="row">
+          <text class="k">缓存</text>
+          <text class="v">{{storageLabel}}</text>
+        </div>
+      </div>
+
+      <div class="testwrap">
+        <div class="btn" onclick="onTest"><text class="btn-t">{{testLabel}}</text></div>
+        <text class="test test-good" if="{{testGood}}">{{testLine}}</text>
+        <text class="test test-warn" if="{{testWarn}}">{{testLine}}</text>
+        <text class="test test-bad" if="{{testBad}}">{{testLine}}</text>
+      </div>
+
+      <div class="issues" if="{{hasIssues}}">
+        <text class="issues-t">待处理</text>
+        <text class="issue" for="{{issueLines}}">{{$item}}</text>
+      </div>
+
+      <div class="err" if="{{hasLastErr}}">
+        <text class="err-t">最近一次错误 · {{lastErrCode}}</text>
+        <text class="err-d">{{lastErrText}}</text>
+      </div>
+
+      <div class="btn btn-ghost" onclick="onClear"><text class="ghost-t">{{clearLabel}}</text></div>
+
+      <text class="note">改接口 / Key，请编辑 config.local.json 后重新打包。</text>
+
+    </scroll>
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import '../../core/boot.js'
+
+const WM = globalThis.__wm || {}
+WM.save.use(storage)
+
+const C = WM.config
+const F = WM.format
+const S = WM.store
+const A = WM.api
+
+export default {
+  private: {
+    modeLabel: '',
+    providerLabel: '',
+    modelLabel: '',
+    endpointLabel: '',
+    keyLabel: '',
+    bridgeLabel: '',
+    versionLabel: '',
+    storageLabel: '',
+    testLabel: '测试连接',
+    testLine: '',
+    testGood: false,
+    testWarn: false,
+    testBad: false,
+    hasIssues: false,
+    issueLines: [],
+    hasLastErr: false,
+    lastErrCode: '',
+    lastErrText: '',
+    clearLabel: '清除本地缓存'
+  },
+
+  onInit() {
+    this.confirmClear = false
+    S.hydrate(() => {
+      this.render()
+    })
+  },
+
+  onShow() {
+    this.render()
+  },
+
+  render() {
+    const mode = C.mode()
+    const p = C.provider()
+    const issues = C.issues()
+
+    this.modeLabel = mode === 'bridge' ? '桥接 ›' : mode === 'demo' ? '演示（构建时）' : '直连 ›'
+    this.providerLabel = mode === 'bridge' ? '由桥接决定' : p ? p.label + ' ›' : '—'
+    this.modelLabel = mode === 'bridge' ? '由桥接决定' : p && p.model ? F.clip(p.model, 18) : '—'
+    this.endpointLabel =
+      mode === 'bridge'
+        ? C.hostOf(C.bridgeUrl() || '') || '未设置'
+        : p && C.baseUrl(p)
+          ? C.hostOf(C.baseUrl(p))
+          : '未设置'
+    this.keyLabel = mode === 'bridge' ? (C.get().bridge && C.get().bridge.token ? 'Token 已配置' : 'Token 未配置') : p ? C.maskKey(p.apiKey) : '未配置'
+    this.bridgeLabel = C.bridgeUrl() ? C.hostOf(C.bridgeUrl()) : '未设置'
+
+    const meta = C.meta || {}
+    this.versionLabel = 'v' + (meta.version || '0.1.0') + (meta.hash ? ' · ' + meta.hash : '')
+    this.storageLabel = WM.save.isAvailable() ? '可写' : '只读/不可用'
+
+    this.hasIssues = issues.length > 0
+    this.issueLines = issues.slice(0, 3)
+
+    const le = S.state.lastError
+    if (le && le.code) {
+      this.hasLastErr = true
+      this.lastErrCode = le.code
+      this.lastErrText = le.title + ' · ' + F.clip(le.detail || le.hint || '', 46)
+    } else {
+      this.hasLastErr = false
+    }
+  },
+
+  onToggleMode() {
+    const mode = C.mode()
+    if (mode === 'demo') {
+      this.showTest('构建时固定为演示模式，重新打包可改', true, false)
+      return
+    }
+    const next = mode === 'bridge' ? 'direct' : 'bridge'
+    S.setMode(next)
+    this.resetTest()
+    this.render()
+  },
+
+  onProvider() {
+    if (C.mode() !== 'direct') {
+      this.showTest('桥接模式下由服务端选择模型', true, false)
+      return
+    }
+    const p = S.cycleProvider(1)
+    this.resetTest()
+    this.render()
+    if (p) this.showTest('已切到 ' + p.label, true, false)
+  },
+
+  onTest() {
+    if (this.testing) return
+    this.testing = true
+    this.testLabel = '测试中…'
+    this.resetTest()
+    A.test()
+      .then((r) => {
+        this.testing = false
+        this.testLabel = '再测一次'
+        this.showTest(r.label + ' · ' + r.detail, !r.warn, r.warn)
+      })
+      .catch((e) => {
+        this.testing = false
+        this.testLabel = '重试'
+        const info = F.errorInfo(F.toError(e))
+        this.showTest(info.title + ' · ' + info.hint, false, false, true)
+        S.lastError(info)
+        this.render()
+      })
+  },
+
+  onClear() {
+    if (!this.confirmClear) {
+      this.confirmClear = true
+      this.clearLabel = '再点一次确认'
+      this.clearTimer = setTimeout(() => {
+        this.confirmClear = false
+        this.clearLabel = '清除本地缓存'
+      }, 3000)
+      return
+    }
+    if (this.clearTimer) {
+      clearTimeout(this.clearTimer)
+      this.clearTimer = null
+    }
+    this.confirmClear = false
+    this.clearLabel = '清除本地缓存'
+    S.resetCache().then(() => {
+      this.showTest('缓存已清除', true, false)
+      this.render()
+    })
+  },
+
+  showTest(line, good, warn, bad) {
+    this.testLine = line
+    this.testGood = !!good
+    this.testWarn = !!warn
+    this.testBad = !!bad
+  },
+
+  resetTest() {
+    this.testLine = ''
+    this.testGood = false
+    this.testWarn = false
+    this.testBad = false
+  },
+
+  onBack() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  padding: 12px 14px;
+  background-color: #07090d;
+}
+
+.head {
+  width: 100%;
+  height: 44px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.back {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background-color: #0f141d;
+  justify-content: center;
+  align-items: center;
+}
+
+.back-ic {
+  width: 28px;
+  height: 28px;
+}
+
+.title {
+  flex: 1;
+  color: #eaf0f8;
+  font-size: 22px;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.body {
+  width: 100%;
+  height: 448px;
+  margin-top: 6px;
+}
+
+.sec {
+  width: 100%;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.sec-t {
+  color: #5d687c;
+  font-size: 13px;
+  margin-bottom: 5px;
+  margin-left: 2px;
+}
+
+.row {
+  width: 100%;
+  height: 48px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-radius: 12px;
+  background-color: #0f141d;
+  margin-bottom: 4px;
+}
+
+.k {
+  color: #8a95a8;
+  font-size: 16px;
+}
+
+.v {
+  color: #d7e2f1;
+  font-size: 16px;
+}
+
+.v-accent {
+  color: #5ee1c1;
+}
+
+.testwrap {
+  width: 100%;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+.btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 13px;
+  background-color: #17362f;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn-t {
+  color: #8ff0d8;
+  font-size: 17px;
+  font-weight: bold;
+}
+
+.test {
+  width: 100%;
+  font-size: 13px;
+  margin-top: 6px;
+  text-align: center;
+}
+
+.test-good {
+  color: #6ee7a8;
+}
+
+.test-warn {
+  color: #f3c07b;
+}
+
+.test-bad {
+  color: #ff9a9a;
+}
+
+.issues {
+  width: 100%;
+  flex-direction: column;
+  padding: 11px 13px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background-color: #1a1408;
+  border-width: 1px;
+  border-color: #3a2a12;
+}
+
+.issues-t {
+  color: #f3c07b;
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.issue {
+  color: #b99a6a;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.err {
+  width: 100%;
+  flex-direction: column;
+  padding: 11px 13px;
+  margin-top: 10px;
+  border-radius: 12px;
+  background-color: #1b1012;
+  border-width: 1px;
+  border-color: #3a1a1e;
+}
+
+.err-t {
+  color: #ff9a9a;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.err-d {
+  color: #b9848a;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.btn-ghost {
+  margin-top: 12px;
+  background-color: #12161e;
+  border-width: 1px;
+  border-color: #1d2633;
+}
+
+.ghost-t {
+  color: #9aa6ba;
+  font-size: 15px;
+}
+
+.note {
+  width: 100%;
+  color: #4c586d;
+  font-size: 12px;
+  margin-top: 10px;
+  margin-bottom: 12px;
+}
+</style>

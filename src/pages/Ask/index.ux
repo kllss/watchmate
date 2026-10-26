@@ -1,0 +1,556 @@
+<template>
+  <div class="page">
+
+    <div class="head">
+      <div class="back" onclick="onBack"><image class="back-ic" src="/Common/icons/back.png"></image></div>
+      <text class="title">问 AI</text>
+    </div>
+
+    <scroll class="body" id="ans" scroll-y="true">
+
+      <div class="q" if="{{hasQ}}">
+        <text class="q-k">{{qLabel}}</text>
+        <text class="q-t">{{qText}}</text>
+      </div>
+
+      <div class="two" if="{{!busy && !errOn && !hasAns && showChips}}">
+        <div class="big big-main" onclick="onPick">
+          <image class="big-ic" src="/Common/icons/refresh.png"></image>
+          <text class="big-t">选个问题</text>
+          <text class="big-s">预设指令 · 点开就答</text>
+        </div>
+        <div class="big" onclick="onFree">
+          <image class="big-ic" src="/Common/icons/keyboard.png"></image>
+          <text class="big-t">自己写</text>
+          <text class="big-s">自绘键盘 · 拼音输入</text>
+        </div>
+      </div>
+
+      <div class="chips" if="{{showPicks}}">
+        <div class="chip" if="{{p0.on}}" onclick="onPrompt(0)">
+          <text class="chip-t">{{p0.label}}</text>
+          <text class="chip-s">{{p0.hint}}</text>
+        </div>
+        <div class="chip" if="{{p1.on}}" onclick="onPrompt(1)">
+          <text class="chip-t">{{p1.label}}</text>
+          <text class="chip-s">{{p1.hint}}</text>
+        </div>
+        <div class="chip" if="{{p2.on}}" onclick="onPrompt(2)">
+          <text class="chip-t">{{p2.label}}</text>
+          <text class="chip-s">{{p2.hint}}</text>
+        </div>
+        <div class="chip" if="{{p3.on}}" onclick="onPrompt(3)">
+          <text class="chip-t">{{p3.label}}</text>
+          <text class="chip-s">{{p3.hint}}</text>
+        </div>
+        <div class="deck" if="{{multiPage}}">
+          <text class="deck-b" onclick="onDeck(-1)">‹ 上一组</text>
+          <text class="deck-n">{{pageLabel}}</text>
+          <text class="deck-b" onclick="onDeck(1)">下一组 ›</text>
+        </div>
+      </div>
+
+      <div class="busy" if="{{busy}}">
+        <text class="busy-t">思考中…</text>
+        <text class="busy-s">{{busyHint}}</text>
+      </div>
+
+      <div class="err" if="{{errOn}}">
+        <text class="err-t">{{errTitle}}</text>
+        <text class="err-h">{{errHint}}</text>
+        <text class="err-d" if="{{errDetail}}">{{errDetail}}</text>
+      </div>
+
+      <div class="ansbox" if="{{hasAns}}">
+        <text class="ansline" for="{{lines}}">{{$item}}</text>
+      </div>
+
+      <div class="again" if="{{hasAns || errOn}}" onclick="onShowChips">
+        <text class="again-t">换个问题</text>
+      </div>
+
+    </scroll>
+
+    <div class="foot">
+      <text class="meta">{{metaLine}}</text>
+      <div class="retry" if="{{canRetry}}" onclick="onRetry"><text class="retry-t">重试</text></div>
+    </div>
+
+  </div>
+</template>
+
+<script>
+import router from '@system.router'
+import storage from '@system.storage'
+import vibrator from '@system.vibrator'
+import '../../core/boot.js'
+
+const WM = globalThis.__wm || {}
+WM.save.use(storage)
+
+const C = WM.config
+const F = WM.format
+const S = WM.store
+const A = WM.api
+
+export default {
+  private: {
+    hasQ: false,
+    qLabel: '',
+    qText: '',
+    p0: { on: false, label: '', hint: '' },
+    p1: { on: false, label: '', hint: '' },
+    p2: { on: false, label: '', hint: '' },
+    p3: { on: false, label: '', hint: '' },
+    showChips: true,
+    showPicks: false,
+    multiPage: false,
+    pageLabel: '1/1',
+    busy: false,
+    busyHint: '模型通常会想 2–10 秒',
+    errOn: false,
+    errTitle: '',
+    errHint: '',
+    errDetail: '',
+    hasAns: false,
+    lines: [],
+    metaLine: '',
+    canRetry: false
+  },
+
+  onInit() {
+    this.lastReq = null
+    S.hydrate(() => {
+      this.applyDeck()
+      if (!S.state.prompts.length && C.isBridge()) this.loadDeck()
+    })
+  },
+
+  onShow() {
+    const pending = S.takePending()
+    if (pending) {
+      this.runFree(pending)
+      return
+    }
+    this.applyDeck()
+  },
+
+  loadDeck() {
+    A.prompts().then((list) => {
+      if (list && list.length) {
+        S.cachePrompts(list)
+        this.applyDeck()
+      }
+    })
+  },
+
+  deck() {
+    const list = S.state.prompts && S.state.prompts.length ? S.state.prompts : C.get().prompts || []
+    const out = []
+    for (let i = 0; i < list.length; i++) {
+      if (list[i] && list[i].label) out.push(list[i])
+    }
+    return out
+  },
+
+  applyDeck() {
+    const list = this.deck()
+    const per = 4
+    const pages = Math.max(1, Math.ceil(list.length / per))
+    let page = S.state.deckIndex || 0
+    page = ((page % pages) + pages) % pages
+
+    this.multiPage = pages > 1
+    this.pageLabel = page + 1 + '/' + pages
+
+    const slot = (i) => {
+      const item = list[page * per + i]
+      return item
+        ? { on: true, label: item.label, hint: item.hint || '' }
+        : { on: false, label: '', hint: '' }
+    }
+    this.p0 = slot(0)
+    this.p1 = slot(1)
+    this.p2 = slot(2)
+    this.p3 = slot(3)
+  },
+
+  onDeck(dir) {
+    const list = this.deck()
+    const pages = Math.max(1, Math.ceil(list.length / 4))
+    let page = S.state.deckIndex || 0
+    page = ((page + dir) % pages + pages) % pages
+    S.setDeck(page)
+    this.applyDeck()
+    this.scrollTop()
+  },
+
+  onPick() {
+    this.showPicks = true
+    this.applyDeck()
+    this.scrollTop()
+  },
+
+  onPrompt(i) {
+    if (this.busy) return
+    const list = this.deck()
+    const per = 4
+    const pages = Math.max(1, Math.ceil(list.length / per))
+    const page = ((S.state.deckIndex || 0) % pages + pages) % pages
+    const prompt = list[page * per + i]
+    if (!prompt) return
+
+    this.hasQ = true
+    this.qLabel = prompt.label
+    this.qText = F.clip(prompt.text || prompt.hint || '', 56)
+    this.lastReq = { kind: 'prompt', prompt: prompt }
+    this.send(A.ask(prompt))
+  },
+
+  onFree() {
+    router.push({ uri: '/compose' })
+  },
+
+  runFree(text) {
+    this.hasQ = true
+    this.qLabel = '自由输入'
+    this.qText = F.clip(text, 64)
+    this.lastReq = { kind: 'free', text: text }
+    this.send(A.free(text))
+  },
+
+  send(promise) {
+    this.busy = true
+    this.busyHint = C.isBridge() ? '桥接会先取数据，再让模型总结' : '模型通常会想 2–10 秒'
+    this.errOn = false
+    this.hasAns = false
+    this.metaLine = ''
+    this.canRetry = false
+    this.showChips = false
+    this.showPicks = false
+    this.scrollTop()
+
+    promise
+      .then((res) => {
+        this.busy = false
+        const maxChars = (C.get().request && C.get().request.maxChars) || 900
+        const lines = F.answerLines(res.text, maxChars)
+        this.lines = lines
+        this.hasAns = lines.length > 0
+        this.canRetry = true
+        const m = res.meta || {}
+        this.metaLine = (m.provider ? m.provider + ' · ' : '') + (m.model || '') + ' · ' + F.fmtMs(m.ms) + F.fmtTokens(m.usage)
+        S.cacheAnswer({
+          text: res.text,
+          at: Date.now(),
+          promptLabel: this.qLabel,
+          meta: m
+        })
+        S.lastError(null)
+        this.buzz()
+        this.scrollTop()
+      })
+      .catch((e) => {
+        this.busy = false
+        const info = F.errorInfo(F.toError(e))
+        this.errOn = true
+        this.errTitle = info.title
+        this.errHint = info.hint
+        this.errDetail = info.detail
+        this.canRetry = true
+        this.metaLine = info.code
+        S.lastError(info)
+        this.buzz()
+        this.scrollTop()
+      })
+  },
+
+  onRetry() {
+    if (this.busy || !this.lastReq) return
+    if (this.lastReq.kind === 'prompt') this.send(A.ask(this.lastReq.prompt))
+    else this.send(A.free(this.lastReq.text))
+  },
+
+  onShowChips() {
+    this.showChips = true
+    this.showPicks = false
+    this.applyDeck()
+    this.scrollTop()
+  },
+
+  scrollTop() {
+    try {
+      this.$element('ans').scrollTo({ top: 0, behavior: 'instant' })
+    } catch (e) {}
+  },
+
+  buzz() {
+    try {
+      vibrator.vibrate({ mode: 'short' })
+    } catch (e) {}
+  },
+
+  onBack() {
+    router.back()
+  }
+}
+</script>
+
+<style>
+.page {
+  width: 100%;
+  height: 100%;
+  flex-direction: column;
+  padding: 12px 14px;
+  background-color: #07090d;
+}
+
+.head {
+  width: 100%;
+  height: 44px;
+  flex-direction: row;
+  align-items: center;
+}
+
+.back {
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 12px;
+  background-color: #0f141d;
+}
+
+.back-ic {
+  width: 28px;
+  height: 28px;
+}
+
+.title {
+  flex: 1;
+  color: #eaf0f8;
+  font-size: 22px;
+  font-weight: bold;
+  margin-left: 10px;
+}
+
+.body {
+  width: 100%;
+  height: 400px;
+  margin-top: 8px;
+}
+
+.q {
+  width: 100%;
+  flex-direction: column;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 14px;
+  background-color: #0b1018;
+  border-width: 1px;
+  border-color: #161d28;
+}
+
+.q-k {
+  color: #5ee1c1;
+  font-size: 13px;
+}
+
+.q-t {
+  color: #b9c3d3;
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+.two {
+  width: 100%;
+  flex-direction: column;
+}
+
+.big {
+  width: 100%;
+  height: 88px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 18px;
+  margin-bottom: 12px;
+  border-radius: 16px;
+  border-width: 1px;
+  border-color: #1b2230;
+  background-color: #0f141d;
+}
+
+.big-main {
+  background-color: #10261f;
+  border-color: #1e4438;
+}
+
+.big-ic {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 6px;
+}
+
+.big-t {
+  color: #eef3fb;
+  font-size: 21px;
+  font-weight: bold;
+}
+
+.big-s {
+  color: #78839a;
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.chips {
+  width: 100%;
+  flex-direction: column;
+}
+
+.chip {
+  width: 100%;
+  height: 60px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 16px;
+  margin-bottom: 8px;
+  border-radius: 14px;
+  background-color: #0f141d;
+  border-width: 1px;
+  border-color: #1b2230;
+}
+
+.chip-t {
+  color: #e8eef7;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.chip-s {
+  color: #78839a;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.deck {
+  width: 100%;
+  height: 30px;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.deck-b {
+  color: #9fb0c7;
+  font-size: 14px;
+}
+
+.deck-n {
+  color: #4c586d;
+  font-size: 12px;
+}
+
+.busy {
+  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  padding: 30px 0;
+}
+
+.busy-t {
+  color: #5ee1c1;
+  font-size: 20px;
+}
+
+.busy-s {
+  color: #6c778c;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.err {
+  width: 100%;
+  flex-direction: column;
+  padding: 14px;
+  border-radius: 14px;
+  background-color: #1b1012;
+  border-width: 1px;
+  border-color: #3a1a1e;
+}
+
+.err-t {
+  color: #ff9a9a;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.err-h {
+  color: #d6a0a4;
+  font-size: 14px;
+  margin-top: 5px;
+}
+
+.err-d {
+  color: #8a666a;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.ansbox {
+  width: 100%;
+  flex-direction: column;
+  padding-bottom: 8px;
+}
+
+.ansline {
+  color: #dfe7f2;
+  font-size: 19px;
+  line-height: 28px;
+  margin-bottom: 4px;
+}
+
+.again {
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  border-radius: 12px;
+  background-color: #101722;
+  justify-content: center;
+  align-items: center;
+}
+
+.again-t {
+  color: #9fb0c7;
+  font-size: 16px;
+}
+
+.foot {
+  width: 100%;
+  height: 28px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.meta {
+  flex: 1;
+  color: #4c586d;
+  font-size: 12px;
+}
+
+.retry {
+  height: 28px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background-color: #1a1f29;
+  justify-content: center;
+  align-items: center;
+}
+
+.retry-t {
+  color: #c3cddc;
+  font-size: 14px;
+}
+</style>

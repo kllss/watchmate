@@ -1,0 +1,19 @@
+# ===== 本机私有配置：绝不提交 =====
+config.local.json
+bridge/config.local.json
+src/config.gen.js
+
+# ===== 构建产物 =====
+node_modules/
+.build/
+dist/
+fetch-probe/.build/
+fetch-probe/dist/
+
+# ===== 系统与编辑器 =====
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.tmp

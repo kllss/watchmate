@@ -1,0 +1,19 @@
+<script>
+export default {
+  onCreate() {
+    console.log('[wm] app onCreate')
+  },
+  onShow() {
+    console.log('[wm] app onShow')
+  },
+  onHide() {
+    console.log('[wm] app onHide')
+  },
+  onDestroy() {
+    console.log('[wm] app onDestroy')
+  },
+  onError(e) {
+    console.log('[wm] app onError ' + e)
+  }
+}
+</script>
